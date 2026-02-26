@@ -1,23 +1,4 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Promo Cost Calculator</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet" />
-  <style>
-    input[type=number]::-webkit-inner-spin-button,
-    input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
-    input[type=number] { -moz-appearance: textfield; }
-  </style>
-</head>
-<body class="bg-gray-50">
-<div id="root"></div>
-<script type="text/babel">
-const { useState, useMemo, useEffect } = React;
+import { useState, useMemo } from "react";
 
 const Input = ({ value, onChange, prefix, suffix, step = 1, min }) => (
   <div style={{display:'flex',alignItems:'center',border:'1px solid #e5e7eb',borderRadius:'12px',background:'white'}}>
@@ -37,27 +18,19 @@ const Input = ({ value, onChange, prefix, suffix, step = 1, min }) => (
 const fmt = n => `$${n.toFixed(2)}`;
 
 const REWARD_TYPES = [
-  { id: "boost",      label: "Boost",       icon: "🚀" },
-  { id: "nosweat",    label: "No Sweat",    icon: "🛡️" },
-  { id: "bonusentry", label: "Bonus Entry", icon: "🎟️" },
-  { id: "airdrop",    label: "Airdrop",     icon: "🪂" },
+  { id:"boost",       label:"Boost",        icon:"🚀" },
+  { id:"nosweat",     label:"No Sweat",     icon:"🛡️" },
+  { id:"bonusentry",  label:"Bonus Entry",  icon:"🎟️" },
+  { id:"airdrop",     label:"Airdrop",      icon:"🪂" },
 ];
 
-const boostLevels = [0.10, 0.20, 0.30, 0.40, 0.50, 0.75, 1.00];
+const boostLevels = [0.10,0.20,0.30,0.40,0.50,0.75,1.00];
 const ngrColor = n => n < 0 ? '#ef4444' : n >= 5 ? '#10b981' : '#1f2937';
 const ngrBg    = n => n < 0 ? '#fef2f2' : n >= 5 ? '#ecfdf5' : '#f9fafb';
 
-const DEFAULTS = { theoMargin: 31, bonusCashCost: 62, bonusEntryCost: 56, airdropCost: 62 };
+const DEFAULTS = { theoMargin:31, bonusCashCost:62, bonusEntryCost:56, airdropCost:62, winRateNoRestriction:10.62, winRatePick3:8.75 };
 
-function loadAssumptions() {
-  try {
-    const s = localStorage.getItem('promo-assumptions');
-    return s ? { ...DEFAULTS, ...JSON.parse(s) } : DEFAULTS;
-  } catch { return DEFAULTS; }
-}
-
-function App() {
-  const saved = loadAssumptions();
+export default function App() {
   const [rewardType, setRewardType]       = useState("boost");
   const [showAssumptions, setShowAssumptions] = useState(false);
   const [entries, setEntries]             = useState(3);
@@ -66,61 +39,61 @@ function App() {
   const [maxFee, setMaxFee]               = useState(10);
   const [numBoosts, setNumBoosts]         = useState(1);
   const [promoAmount, setPromoAmount]     = useState(10);
-  const [theoMargin, setTheoMargin]       = useState(saved.theoMargin);
-  const [bonusCashCost, setBonusCashCost] = useState(saved.bonusCashCost);
-  const [bonusEntryCost, setBonusEntryCost] = useState(saved.bonusEntryCost);
-  const [airdropCost, setAirdropCost]     = useState(saved.airdropCost);
+  const [noSweatPickRestriction, setNoSweatPickRestriction] = useState('none');
 
-  useEffect(() => {
-    try { localStorage.setItem('promo-assumptions', JSON.stringify({ theoMargin, bonusCashCost, bonusEntryCost, airdropCost })); }
-    catch {}
-  }, [theoMargin, bonusCashCost, bonusEntryCost, airdropCost]);
+  const [theoMargin,             setTheoMargin]             = useState(DEFAULTS.theoMargin);
+  const [bonusCashCost,          setBonusCashCost]          = useState(DEFAULTS.bonusCashCost);
+  const [bonusEntryCost,         setBonusEntryCost]         = useState(DEFAULTS.bonusEntryCost);
+  const [airdropCost,            setAirdropCost]            = useState(DEFAULTS.airdropCost);
+  const [winRateNoRestriction,   setWinRateNoRestriction]   = useState(DEFAULTS.winRateNoRestriction);
+  const [winRatePick3,           setWinRatePick3]           = useState(DEFAULTS.winRatePick3);
 
   const calc = useMemo(() => {
     const totalFeeMin = entries * minFee;
     const ggr         = totalFeeMin * (theoMargin / 100);
     const avgGGR      = maxFee * (theoMargin / 100);
     const avgPayout   = maxFee - avgGGR;
-    const boostRows   = boostLevels.map(level => {
+
+    const boostRows = boostLevels.map(level => {
       const bonusPayout = avgPayout * level * numBoosts;
       const bonusCost   = bonusPayout * (bonusCashCost / 100);
       const perUserNGR  = avgGGR - bonusCost;
-      return { level, bonusPayout: +bonusPayout.toFixed(2), bonusCost: +bonusCost.toFixed(2), perUserNGR: +perUserNGR.toFixed(2) };
+      return { level, bonusPayout:+bonusPayout.toFixed(2), bonusCost:+bonusCost.toFixed(2), perUserNGR:+perUserNGR.toFixed(2) };
     });
-    const noSweatBonusCost    = maxFee * (theoMargin / 100);
+
+    const noSweatWinRate  = (noSweatPickRestriction === 'pick3' ? winRatePick3 : winRateNoRestriction) / 100;
+    const noSweatLossRate = 1 - noSweatWinRate;
+    const noSweatBonusCost = maxFee * noSweatLossRate * (bonusCashCost / 100);
+
     const bonusEntryBonusCost = promoAmount * (bonusEntryCost / 100);
     const airdropBonusCost    = promoAmount * (airdropCost / 100);
-    return {
-      totalFeeMin, ggr: +ggr.toFixed(2), boostRows,
-      noSweat:    { bonusCost: +noSweatBonusCost.toFixed(2),    ngr: +(ggr - noSweatBonusCost).toFixed(2) },
-      bonusEntry: { bonusCost: +bonusEntryBonusCost.toFixed(2), ngr: +(ggr - bonusEntryBonusCost).toFixed(2) },
-      airdrop:    { bonusCost: +airdropBonusCost.toFixed(2),    ngr: +(ggr - airdropBonusCost).toFixed(2) },
-    };
-  }, [entries, minFee, pickMin, maxFee, numBoosts, promoAmount, theoMargin, bonusCashCost, bonusEntryCost, airdropCost]);
 
-  const card = (children, extra={}) => (
-    <div style={{background:'white',borderRadius:'16px',border:'1px solid #f3f4f6',padding:'20px',boxShadow:'0 1px 3px rgba(0,0,0,0.05)',...extra}}>
+    return {
+      totalFeeMin, ggr:+ggr.toFixed(2), boostRows,
+      noSweat:    { bonusCost:+noSweatBonusCost.toFixed(2), ngr:+(ggr-noSweatBonusCost).toFixed(2), winRate:+(noSweatWinRate*100).toFixed(2), lossRate:+(noSweatLossRate*100).toFixed(2) },
+      bonusEntry: { bonusCost:+bonusEntryBonusCost.toFixed(2), ngr:+(ggr-bonusEntryBonusCost).toFixed(2) },
+      airdrop:    { bonusCost:+airdropBonusCost.toFixed(2),    ngr:+(ggr-airdropBonusCost).toFixed(2) },
+    };
+  }, [entries, minFee, pickMin, maxFee, numBoosts, promoAmount, theoMargin, bonusCashCost, bonusEntryCost, airdropCost, noSweatPickRestriction, winRateNoRestriction, winRatePick3]);
+
+  const card = (children) => (
+    <div style={{background:'white',borderRadius:'16px',border:'1px solid #f3f4f6',padding:'20px',boxShadow:'0 1px 3px rgba(0,0,0,0.05)'}}>
       {children}
     </div>
   );
-
-  const sectionLabel = txt => (
-    <p style={{fontSize:'11px',fontWeight:700,color:'#9ca3af',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:'12px'}}>{txt}</p>
-  );
-
-  const statBox = (label, value, sub, bg='#eff6ff', color='#3730a3') => (
-    <div style={{background:bg,borderRadius:'12px',padding:'12px',textAlign:'center'}}>
-      <p style={{fontSize:'11px',fontWeight:600,color:'#6366f1'}}>{label}</p>
-      <p style={{fontSize:'18px',fontWeight:700,color,marginTop:'2px'}}>{value}</p>
-      {sub && <p style={{fontSize:'11px',color:'#9ca3af',marginTop:'2px'}}>{sub}</p>}
+  const sectionLabel = txt => <p style={{fontSize:'11px',fontWeight:700,color:'#9ca3af',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:'12px'}}>{txt}</p>;
+  const statBox = (label,value,sub) => (
+    <div style={{background:'#eff6ff',borderRadius:'12px',padding:'12px',textAlign:'center'}}>
+      <p style={{fontSize:'11px',fontWeight:600,color:'#6366f1',margin:0}}>{label}</p>
+      <p style={{fontSize:'18px',fontWeight:700,color:'#3730a3',margin:'2px 0'}}>{value}</p>
+      {sub && <p style={{fontSize:'11px',color:'#9ca3af',margin:0}}>{sub}</p>}
     </div>
   );
-
-  const resultBox = (label, value, sub, ngr=false, n=0) => (
+  const resultBox = (label,value,sub,ngr=false,n=0) => (
     <div style={{background: ngr ? ngrBg(n) : '#f9fafb',borderRadius:'12px',padding:'16px',textAlign:'center'}}>
-      <p style={{fontSize:'11px',fontWeight:600,color:'#9ca3af'}}>{label}</p>
-      <p style={{fontSize:'20px',fontWeight:700,color: ngr ? ngrColor(n) : '#1f2937',marginTop:'4px'}}>{value}</p>
-      {sub && <p style={{fontSize:'11px',color:'#9ca3af',marginTop:'2px'}}>{sub}</p>}
+      <p style={{fontSize:'11px',fontWeight:600,color:'#9ca3af',margin:0}}>{label}</p>
+      <p style={{fontSize:'20px',fontWeight:700,color: ngr ? ngrColor(n) : '#1f2937',margin:'4px 0'}}>{value}</p>
+      {sub && <p style={{fontSize:'11px',color:'#9ca3af',margin:0}}>{sub}</p>}
     </div>
   );
 
@@ -137,7 +110,7 @@ function App() {
           <button onClick={() => setShowAssumptions(v => !v)}
             style={{fontSize:'12px',borderRadius:'10px',padding:'8px 12px',border: showAssumptions ? 'none' : '1px solid #e5e7eb',
               background: showAssumptions ? '#4f46e5' : 'white',color: showAssumptions ? 'white' : '#6b7280',
-              cursor:'pointer',fontWeight:500,transition:'all 0.2s'}}>
+              cursor:'pointer',fontWeight:500}}>
             ⚙️ Assumptions
           </button>
         </div>
@@ -149,20 +122,22 @@ function App() {
             <p style={{fontSize:'11px',color:'#d97706',marginBottom:'12px',marginTop:'-8px'}}>Changes save automatically.</p>
             <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'12px'}}>
               {[
-                { label:'Theo Margin', value:theoMargin, set:setTheoMargin, suffix:'%' },
-                { label:'Bonus Cash Cost', value:bonusCashCost, set:setBonusCashCost, suffix:'%', sub:'Boosts & No Sweats' },
-                { label:'Bonus Entry Cost', value:bonusEntryCost, set:setBonusEntryCost, suffix:'%' },
-                { label:'Airdrop Cost', value:airdropCost, set:setAirdropCost, suffix:'%' },
+                { label:'Theo Margin',              value:theoMargin,           set:setTheoMargin,           suffix:'%' },
+                { label:'Bonus Cash Cost',          value:bonusCashCost,        set:setBonusCashCost,        suffix:'%', sub:'Boosts & No Sweats' },
+                { label:'Bonus Entry Cost',         value:bonusEntryCost,       set:setBonusEntryCost,       suffix:'%' },
+                { label:'Airdrop Cost',             value:airdropCost,          set:setAirdropCost,          suffix:'%' },
+                { label:'Win Rate — No Restriction',value:winRateNoRestriction, set:setWinRateNoRestriction, suffix:'%', sub:'No Sweat' },
+                { label:'Win Rate — Pick 3',        value:winRatePick3,         set:setWinRatePick3,         suffix:'%', sub:'No Sweat' },
               ].map(a => (
                 <div key={a.label}>
                   <p style={{fontSize:'11px',fontWeight:600,color:'#92400e',marginBottom:'4px'}}>{a.label}</p>
-                  <Input value={a.value} onChange={a.set} suffix={a.suffix} step={0.1} />
+                  <Input value={a.value} onChange={a.set} suffix={a.suffix} step={0.01} />
                   {a.sub && <p style={{fontSize:'11px',color:'#b45309',marginTop:'4px'}}>{a.sub}</p>}
                 </div>
               ))}
             </div>
             <div style={{textAlign:'right',marginTop:'12px'}}>
-              <button onClick={() => { setTheoMargin(DEFAULTS.theoMargin); setBonusCashCost(DEFAULTS.bonusCashCost); setBonusEntryCost(DEFAULTS.bonusEntryCost); setAirdropCost(DEFAULTS.airdropCost); }}
+              <button onClick={() => { setTheoMargin(DEFAULTS.theoMargin); setBonusCashCost(DEFAULTS.bonusCashCost); setBonusEntryCost(DEFAULTS.bonusEntryCost); setAirdropCost(DEFAULTS.airdropCost); setWinRateNoRestriction(DEFAULTS.winRateNoRestriction); setWinRatePick3(DEFAULTS.winRatePick3); }}
                 style={{fontSize:'11px',color:'#b45309',background:'none',border:'none',cursor:'pointer',textDecoration:'underline'}}>
                 Reset to defaults
               </button>
@@ -176,8 +151,8 @@ function App() {
           <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:'12px'}}>
             {[
               { label:'Entries', value:entries, set:setEntries },
-              { label:'Min Fee', value:minFee, set:setMinFee, prefix:'$', step:0.5 },
-              { label:'Pick Min', value:pickMin, set:setPickMin, step:0.01, min:0 },
+              { label:'Min Fee', value:minFee,  set:setMinFee,  prefix:'$', step:0.5 },
+              { label:'Pick Min',value:pickMin, set:setPickMin, step:0.01, min:0 },
             ].map(f => (
               <div key={f.label}>
                 <p style={{fontSize:'11px',fontWeight:600,color:'#6b7280',marginBottom:'4px'}}>{f.label}</p>
@@ -197,8 +172,10 @@ function App() {
           <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr 1fr',gap:'8px'}}>
             {REWARD_TYPES.map(r => (
               <button key={r.id} onClick={() => setRewardType(r.id)}
-                style={{borderRadius:'12px',padding:'12px 8px',fontSize:'12px',fontWeight:600,border: rewardType === r.id ? 'none' : '1px solid #f3f4f6',
-                  background: rewardType === r.id ? '#4f46e5' : 'white',color: rewardType === r.id ? 'white' : '#6b7280',
+                style={{borderRadius:'12px',padding:'12px 8px',fontSize:'12px',fontWeight:600,
+                  border: rewardType === r.id ? 'none' : '1px solid #f3f4f6',
+                  background: rewardType === r.id ? '#4f46e5' : 'white',
+                  color: rewardType === r.id ? 'white' : '#6b7280',
                   cursor:'pointer',display:'flex',flexDirection:'column',alignItems:'center',gap:'4px',
                   boxShadow: rewardType === r.id ? '0 4px 12px rgba(79,70,229,0.3)' : 'none',transition:'all 0.2s'}}>
                 <span style={{fontSize:'18px'}}>{r.icon}</span>
@@ -231,11 +208,11 @@ function App() {
             </thead>
             <tbody>
               {calc.boostRows.map((b,i) => (
-                <tr key={i} style={{borderBottom:'1px solid #f9fafb',background: ngrBg(b.perUserNGR)}}>
+                <tr key={i} style={{borderBottom:'1px solid #f9fafb',background:ngrBg(b.perUserNGR)}}>
                   <td style={{padding:'10px 4px',fontWeight:700,color:'#374151'}}>{(b.level*100).toFixed(0)}%</td>
                   <td style={{padding:'10px 4px',textAlign:'right',color:'#9ca3af'}}>{fmt(b.bonusPayout)}</td>
                   <td style={{padding:'10px 4px',textAlign:'right',color:'#9ca3af'}}>{fmt(b.bonusCost)}</td>
-                  <td style={{padding:'10px 4px',textAlign:'right',fontWeight:700,color: ngrColor(b.perUserNGR)}}>{fmt(b.perUserNGR)}</td>
+                  <td style={{padding:'10px 4px',textAlign:'right',fontWeight:700,color:ngrColor(b.perUserNGR)}}>{fmt(b.perUserNGR)}</td>
                 </tr>
               ))}
             </tbody>
@@ -249,10 +226,27 @@ function App() {
           <div style={{marginBottom:'16px'}}>
             <p style={{fontSize:'11px',fontWeight:600,color:'#6b7280',marginBottom:'4px'}}>Max Fee ($)</p>
             <Input value={maxFee} onChange={setMaxFee} prefix="$" step={0.5} />
-            <p style={{fontSize:'11px',color:'#9ca3af',marginTop:'6px'}}>Max fee eligible for the no sweat reward</p>
           </div>
-          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'12px'}}>
-            {resultBox('Bonus Cost', fmt(calc.noSweat.bonusCost), `$${maxFee} × ${theoMargin}%`)}
+          <div style={{marginBottom:'16px'}}>
+            <p style={{fontSize:'11px',fontWeight:600,color:'#6b7280',marginBottom:'8px'}}>Pick Restriction</p>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'8px'}}>
+              {[{id:'none',label:'No Restriction',sub:`Win Rate: ${winRateNoRestriction}%`},{id:'pick3',label:'Pick 3',sub:`Win Rate: ${winRatePick3}%`}].map(r => (
+                <button key={r.id} onClick={() => setNoSweatPickRestriction(r.id)}
+                  style={{borderRadius:'12px',padding:'10px 12px',fontSize:'12px',fontWeight:600,
+                    border: noSweatPickRestriction === r.id ? 'none' : '1px solid #f3f4f6',
+                    background: noSweatPickRestriction === r.id ? '#4f46e5' : 'white',
+                    color: noSweatPickRestriction === r.id ? 'white' : '#6b7280',
+                    cursor:'pointer',textAlign:'center',
+                    boxShadow: noSweatPickRestriction === r.id ? '0 4px 12px rgba(79,70,229,0.3)' : 'none',transition:'all 0.2s'}}>
+                  <div>{r.label}</div>
+                  <div style={{fontSize:'10px',opacity:0.8,marginTop:'2px'}}>{r.sub}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:'12px'}}>
+            {resultBox('Loss Rate', `${calc.noSweat.lossRate.toFixed(1)}%`, `1 − ${calc.noSweat.winRate}% win rate`)}
+            {resultBox('Bonus Cost', fmt(calc.noSweat.bonusCost), `Max Fee × Loss Rate × ${bonusCashCost}%`)}
             {resultBox('Per User NGR', fmt(calc.noSweat.ngr), 'GGR − Bonus Cost', true, calc.noSweat.ngr)}
           </div>
         </>)}
@@ -287,8 +281,3 @@ function App() {
     </div>
   );
 }
-
-ReactDOM.render(<App />, document.getElementById('root'));
-</script>
-</body>
-</html>
